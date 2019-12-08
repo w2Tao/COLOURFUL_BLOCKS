@@ -10,7 +10,7 @@
 #define qwq MessageBox(NULL,"此功能正在研发中，关注作者以获取持续更新！","Information",MB_OK|MB_ICONINFORMATION);
 #define wrong_input MessageBox(NULL,"输入有误，请重新输入","Error",MB_ICONERROR|MB_OK);
 using namespace std;
-int width,height,ans,linkcnt,c;
+int width,height,ans,linkcnt,c,magicpoint,addmagicpoint;
 int mappc[MAX_SIZE][MAX_SIZE];//colour
 bool mappv[MAX_SIZE][MAX_SIZE];//visited
 bool linkblock[MAX_SIZE][MAX_SIZE];
@@ -123,7 +123,8 @@ void show()
 	}
 	SetConsoleTextAttribute(hout,FOREGROUND_INTENSITY);
 	cout<<"score:"<<ans<<endl;
-	cout<<"输入交换点的坐标：行 列 \n(输入0结束游戏)"<<endl;
+	cout<<"magicpoint:"<<magicpoint<<endl;
+	cout<<"输入交换点的坐标：行 列 (如：1 1 1 2)\n(输入0结束游戏，输入-1使用magic)"<<endl;
 }
 void initm(bool m[MAX_SIZE][MAX_SIZE],int lx,int ly,int rx,int ry)
 {
@@ -174,10 +175,12 @@ void award(int n)
 	wsprintf(textbuf,TEXT("你得了%d分！"),n);
 	MessageBox(NULL,textbuf,"Congratulation",MB_OK);
 	ans+=n;
+	magicpoint+=addmagicpoint;
 }
 int search(int lx=1,int ly=1,int rx=height,int ry=width)
 {
 	int add=0;
+	addmagicpoint=0;
 	initm(mappv,lx,ly,rx,ry);
 	initm(linkblock,lx,ly,rx,ry);
 	for(int i=lx;i<=rx;i++)
@@ -191,7 +194,11 @@ int search(int lx=1,int ly=1,int rx=height,int ry=width)
 	{
 		for(int j=ly;j<=ry;j++)
 		{
-			if(linkblock[i][j]) add++;
+			if(linkblock[i][j])
+			{
+				add+=mapp[i][j]->score();
+				if(mapp[i][j]->score()==0) addmagicpoint++;
+			}
 		}
 	}
 	return add;
@@ -244,6 +251,7 @@ void newgame1()
 	width=5;
 	height=5;
 	linkcnt=5;
+	ans=0;
 	for(int i=0;i<=height+1;i++)
 	{
 		for(int j=0;j<=width+1;j++)
@@ -266,7 +274,9 @@ void newgame2()
 {
 	width=8;
 	height=8;
-	linkcnt=5;	
+	linkcnt=5;
+	ans=0;
+	magicpoint=0;
 	for(int i=0;i<=height+1;i++)
 	{
 		for(int j=0;j<=width+1;j++)
@@ -282,6 +292,11 @@ void newgame2()
 				continue;
 			}
 			mapp[i][j]=new block(pow(2,rand(0,2)));
+			if(rand(1,8)==1)
+			{
+				delete mapp[i][j];
+				mapp[i][j]=new sblock(pow(2,rand(0,2)),0);
+			} 			
 		}
 	}	
 }
@@ -419,6 +434,68 @@ void play()
 						{
 							game_over();
 							goto A;
+						}
+						if(x1==-1)
+						{
+							if(magicpoint==0)
+							{
+								MessageBox(NULL,"你的magicpoint为0，无法使用magic","Error",MB_OK);
+								continue;
+							}
+							C:
+							//show();
+							cout<<"发动magic：\n";
+							cout<<"1.移动任意两个点\n";
+							cout<<"2.清理一个点\n";
+							cout<<"0.取消发动magic\n";
+							cin>>c;
+							if(c==0) continue;
+							if(c==1)
+							{
+								cout<<"输入交换点的坐标：行 列 (如：1 1 1 2)\n输入0取消\n";
+								cin>>x1;
+								if(x1==0) continue;
+								cin>>y1>>x2>>y2;
+								if(x1<1||x1>height||x2<1||x2>height||y1<1||y1>width||y2<1||y2>width)
+								{
+									wrong_input
+									cin.clear();
+									cin.sync();
+									continue;
+								}
+								swap(mapp[x1][y1],mapp[x2][y2]);
+								magicpoint--;					 
+							}
+							if(c==2)
+							{
+								cout<<"输入清理点的坐标：行 列 (如：1 2)\n输入0取消\n";
+								cin>>x1;
+								if(x1==0) continue;
+								cin>>y1;
+								if(x1<1||x1>height||y1<1||y1>width||mapp[x1][y1]==NULL)
+								{
+									wrong_input
+									cin.clear();
+									cin.sync();								
+									continue;									
+								}
+								delete mapp[x1][y1];
+								t=x1-1;
+								while(t>1&&mapp[t][y1]!=NULL)
+								{
+									mapp[t+1][y1]=mapp[t][y1];
+									t--;
+								}
+								magicpoint--;
+							}
+							else
+							{
+								wrong_input
+								cin.clear();
+								cin.sync();								
+								continue;
+							}
+							continue;
 						}
 						cin>>y1>>x2>>y2;
 						if(x1<1||x1>height||x2<1||x2>height||y1<1||y1>width||y2<1||y2>width)
